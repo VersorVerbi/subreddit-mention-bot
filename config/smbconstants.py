@@ -1,5 +1,0 @@
-REDDIT_USER = '[a valid user with developer privileges in your Reddit app]'
-REDDIT_PW = '[that user's password]'
-CLIENT_ID = '[client ID for your Reddit app]'
-CLIENT_SECRET = '[client secret for your Reddit app]'
-USER_AGENT = '[user agent for your Reddit app]'
