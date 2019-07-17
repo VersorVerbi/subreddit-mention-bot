@@ -83,7 +83,7 @@ def print_report(report):
         for key, value in report.items():
             if "|links" in key or "|name" in key:
                 continue
-            if key == config.SUBREDDIT:
+            if key in EXCLUDED_SUBREDDITS:
                 continue
             report_message = report_message + report[key + "|name"] + "|" + str(value) + "|"
             linklist = report[key + "|links"]
