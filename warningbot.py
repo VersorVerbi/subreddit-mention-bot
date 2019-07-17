@@ -71,8 +71,7 @@ def get_report_data(mentions):
     return report
 
 def print_report(report):
-    report_message = ""
-    report_message = report_message + "Subreddit|Mentions|Links\n"
+    report_message = "Subreddit|Mentions|Links\n"
     report_message = report_message + ":--|--:|:--\n"
     includes_reference = False
     for sub in report:
