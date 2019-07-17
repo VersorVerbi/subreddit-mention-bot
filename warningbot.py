@@ -57,13 +57,13 @@ try:
         # get recent posts and comments
         strm = praw.models.util.stream_generator(lambda **kwargs: subs_and_cmts(r.subreddit('all'), **kwargs))
         # check bodies of posts
-        print("Beginning post stream...")
+        #print("Beginning post stream...")
         for post in strm:
             time = datetime.datetime.utcnow()
             if last_time != None:
                 timeDelt = time - last_time
                 if (timeDelt.total_seconds() > TIMELAPSE): # 12 hours by default
-                    print("Sending report!")
+                    #print("Sending report!")
                     post_report = get_report_data(mentions)
                     # send the message
                     report_message = "Hi r/" + config.SUBREDDIT + " mods!\n\nThis is your twice-daily report on references to the subreddit"
@@ -79,10 +79,10 @@ try:
                     mentions.clear()
                     # update the timestamp
                     last_time = time
-                    print("New loop begins: ",last_time.ctime())
+                    #print("New loop begins: ",last_time.ctime())
             else:
                 last_time = time
-                print("Time begins: ",last_time.ctime())
+                #print("Time begins: ",last_time.ctime())
             #print(" - ",post.id)
             if post.id not in posts_evald:
                 if isinstance(post,praw.models.Submission):
