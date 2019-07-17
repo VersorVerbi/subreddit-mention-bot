@@ -1,5 +1,8 @@
-REDDIT_USER = '[a valid user with developer privileges in your Reddit app]'
+REDDIT_USER = '[a valid user with developer privileges in your Reddit app, ideally the bot user]'
 REDDIT_PW = '[that user's password]'
 CLIENT_ID = '[client ID for your Reddit app]'
 CLIENT_SECRET = '[client secret for your Reddit app]'
 USER_AGENT = '[user agent for your Reddit app]'
+SUBREDDIT = '[the name of the subreddit (without r/) to check for]'
+NUM_HOURS = [number of hours between messages]
+ADMIN_USER = '[your user, for contact and error message purposes]'
