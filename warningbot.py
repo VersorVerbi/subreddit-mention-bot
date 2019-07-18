@@ -97,14 +97,14 @@ def print_report(report):
     return report_message
     
 def standard_message(report, last_time, time, recipient=None, is_special=False):
-	if recipient == None:
-		recipient_text = 'r/' + config.SUBREDDIT + ' mods'
-	else:
-		recipient_text = '/u/' + recipient
-	if is_special:
-		special_text = 'special'
-	else:
-		special_text = 'regular'
+    if recipient == None:
+        recipient_text = 'r/' + config.SUBREDDIT + ' mods'
+    else:
+        recipient_text = '/u/' + recipient
+    if is_special:
+        special_text = 'special'
+    else:
+        special_text = 'regular'
     report_message = "Hi " + recipient_text + "!\n\nThis is your " + special_text + " report on references to the subreddit"
     report_message += " throughout Reddit. This does NOT include cross-posts, which are generally handled"
     report_message += " by other means, but it does include direct post or comment linking.\n\n"
@@ -167,15 +167,15 @@ def exclusion_removed(inclusion, author):
     return message
 
 def invalid_command():
-	return 'You have attempted to send a command, but the command you sent was invalid.'
+    return 'You have attempted to send a command, but the command you sent was invalid.'
 
 def invalid_params():
-	return 'Either you failed to include a required parameter for your command or the parameter you supplied was invalid.'
-	
+    return 'Either you failed to include a required parameter for your command or the parameter you supplied was invalid.'
+    
 def improper_selection():
-	message = 'The subreddit you indicated to exclude is already on the exclusion list,'
-	message += ' or the one you indicated to include is not.'
-	return message
+    message = 'The subreddit you indicated to exclude is already on the exclusion list,'
+    message += ' or the one you indicated to include is not.'
+    return message
 
 def handle_message_command(msg, r, mentions, last_time):
     # first, get the full list of valid administrators, which includes moderators of the given sub
@@ -189,7 +189,7 @@ def handle_message_command(msg, r, mentions, last_time):
     cmd = msg.subject.split()
     if cmd[0].lower() not in BOT_COMMANDS:
         cmd = msg.body.split()
-	# if the command is invalid, report that
+    # if the command is invalid, report that
     if cmd[0].lower() not in BOT_COMMANDS:
         reply_msg = invalid_command() + bot_signature()
         msg.reply(reply_msg)
@@ -248,7 +248,9 @@ try:
                 #print("Time begins: ",last_time.ctime())
             #print(" - ",post.id)
             if post.id not in posts_evald:
-                if isinstance(post,praw.models.Submission):
+                if isinstance(post,praw.models.Message):
+                    handle_message_command(post, r, mentions, last_time)
+                elif isinstance(post,praw.models.Submission):
                     if "r/" + config.SUBREDDIT in post.selftext.lower():
                         mentions.append(post)
                 else:
