@@ -5,7 +5,7 @@ import traceback
 from config import smbconstants as config
 
 config.SUBREDDIT = config.SUBREDDIT.lower()
-TIMELAPSE = config.NUM_HOURS * 60 * 60
+TIMELAPSE = 0
 VALID_ADMINS = [config.ADMIN_USER]
 EXCLUDED_SUBREDDITS = []
 SETTINGS_FILENAME = 'warning_settings.txt'
@@ -46,6 +46,18 @@ def change_timelapse(new_timelapse):
     if new_timelapse <= 0:
         return -1
     TIMELAPSE = new_timelapse * 60 * 60
+    try:
+        f.open(SETTINGS_FILENAME, 'r')
+        lines = ['TIMELAPSE ' + str(TIMELAPSE)]
+        for line in f:
+            if line.split()[0] == 'TIMELAPSE':
+                continue
+            lines.append(line)
+        f.close()
+        f.open(SETTINGS_FILENAME, 'w')
+        f.writelines(lines)
+    finally:
+        f.close()
     return 0
 
 def add_exclusion(subreddit_to_exclude):
@@ -254,6 +266,7 @@ posts_evald = []
 
 try:
     f = open(SETTINGS_FILENAME, 'x')
+    f.write('TIMELAPSE ' + str(config.NUM_HOURS * 60 * 60) + '\n')
     f.write('EXCLUDED\n')
     f.write(config.SUBREDDIT + '\n')
     f.close()
@@ -262,7 +275,10 @@ except FileExistsError:
     f = open(SETTINGS_FILENAME,'r')
 finally:
     for line in f:
-        if line == 'EXCLUDED\n':
+        if line.split()[0] == 'TIMELAPSE':
+            TIMELAPSE = int(line.split()[1])
+            continue
+        elif line == 'EXCLUDED\n':
             continue
         EXCLUDED_SUBREDDITS.append(line)
     f.close()
