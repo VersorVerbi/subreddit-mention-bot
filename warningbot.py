@@ -1,5 +1,7 @@
 import praw
 import datetime
+import sys
+import traceback
 from config import smbconstants as config
 
 config.SUBREDDIT = config.SUBREDDIT.lower()
@@ -18,6 +20,9 @@ BOT_SYNTAX = { 'STATUS': 'Send an immediate status message with the current numb
                'TIMEFRAME #': 'where `#` is an integer representing the number of hours for periodic updates. If shortened, the bot may send an immediate message. Otherwise, the current cycle will respect the new timeframe.',
                'EXCLUDE [subreddit_name]': 'Adds the given subreddit (without the `r/`) to the exclusion list. Mentions on that subreddit will no longer be reported.',
                'INCLUDE [subreddit_name]': 'Removes the given subreddit (without the `r/`) from the exclusion list. Mentions on that subreddit will be reported again.' }
+# command variables
+result = 0
+reply_msg = ''
 
 def switch(dictionary, default, value):
     return dictionary.get(value, default)
@@ -28,7 +33,7 @@ def bot_signature():
     message += ' it operates. Send a single command per message with the command as the complete'
     message += ' subject OR complete body of the message.\n\nEach of these commands is case-'
     message += 'insensitive:\n\n'
-    for cmd,syntax in BOT_SYNTAX:
+    for cmd,syntax in BOT_SYNTAX.items():
         message += '* `' + cmd + '`: ' + syntax + '\n'
     message += '\nPlease send a message to /u/' + config.ADMIN_USER + ' if you have any questions.'
     return message
@@ -100,7 +105,7 @@ def standard_message(report, last_time, time, recipient=None, is_special=False):
     if recipient == None:
         recipient_text = 'r/' + config.SUBREDDIT + ' mods'
     else:
-        recipient_text = '/u/' + recipient
+        recipient_text = '/u/' + recipient.name
     if is_special:
         special_text = 'special'
     else:
@@ -129,7 +134,7 @@ def reply_status_content(mentions, author, last_time):
     return message
 
 def timeframe_updated(timelapse, author, last_time):
-    message = 'Hi /u/' + author + '!\n\n'
+    message = 'Hi /u/' + author.name + '!\n\n'
     message += 'The timeframe for the bot has now been updated to '
     message += str(timelapse) + ' hours. If that is less than the '
     message += 'current cycle, a message will be sent immediately.'
@@ -143,7 +148,7 @@ def timeframe_updated(timelapse, author, last_time):
     return message
 
 def exclusion_added(exclusion, author):
-    message = 'Hi /u/' + author + '!\n\n'
+    message = 'Hi /u/' + author.name + '!\n\n'
     message += 'The list of excluded subreddits has been updated to '
     message += 'include r/' + exclusion + '. If there were mentions '
     message += 'on that subreddit prior to now, they may still be '
@@ -155,7 +160,7 @@ def exclusion_added(exclusion, author):
     return message
 
 def exclusion_removed(inclusion, author):
-    message = 'Hi /u/' + author + '!\n\n'
+    message = 'Hi /u/' + author.name + '!\n\n'
     message += 'The list of excluded subreddits has been updated to '
     message += 'remove r/' + inclusion + '. If there were mentions '
     message += 'on that subreddit prior to now, they may not be '
@@ -166,8 +171,8 @@ def exclusion_removed(inclusion, author):
         message += '* r/' + sub + '\n'
     return message
 
-def invalid_command():
-    return 'You have attempted to send a command, but the command you sent was invalid.'
+def invalid_command(cmd):
+    return 'You have attempted to send a command, but the command you sent was invalid. You sent `' + cmd + '`.'
 
 def invalid_params():
     return 'Either you failed to include a required parameter for your command or the parameter you supplied was invalid.'
@@ -177,11 +182,19 @@ def improper_selection():
     message += ' or the one you indicated to include is not.'
     return message
 
-def handle_message_command(msg, r, mentions, last_time):
+def handle_message_command(msg):
     # first, get the full list of valid administrators, which includes moderators of the given sub
     # (we do this now instead of during setup so that the mods of a sub can change without us having
     # to restart the bot)
-    for mod in r.subreddit(config.SUBREDDIT).moderators():
+    global reply_msg
+    global result
+    global r
+    global mentions
+    global last_time
+    result = 0
+    reply_msg = ''
+    
+    for mod in r.subreddit(config.SUBREDDIT).moderator():
         VALID_ADMINS.append(str(mod))
     # if the sender isn't a valid operator, ignore them
     if msg.author not in VALID_ADMINS:
@@ -191,16 +204,19 @@ def handle_message_command(msg, r, mentions, last_time):
         cmd = msg.body.split()
     # if the command is invalid, report that
     if cmd[0].lower() not in BOT_COMMANDS:
-        reply_msg = invalid_command() + bot_signature()
+        reply_msg = invalid_command(cmd[0]) + bot_signature()
         msg.reply(reply_msg)
         return
-    exec('result = ' + switch(BOT_COMMANDS, '-1', cmd[0].lower()))
+    codeToExec = 'global result; result = ' + switch(BOT_COMMANDS, '-1', cmd[0].lower())
+    #print(result)
+    exec(codeToExec, globals(), locals())
     if result < 0:
         reply_msg = invalid_params()
     elif result > 0:
         reply_msg = improper_selection()
     else:
-        exec('reply_msg = ' + switch(BOT_REPLIES, '-1', cmd[0].lower()))
+        codeToExec = 'global reply_msg; reply_msg = ' + switch(BOT_REPLIES, '-1', cmd[0].lower())
+        exec(codeToExec, globals(), locals())
     reply_msg += bot_signature()
     msg.reply(reply_msg)
     return
@@ -209,7 +225,7 @@ def subs_and_cmts(subreddit, **kwargs):
     results = []
     results.extend(subreddit.new(**kwargs))
     results.extend(subreddit.comments(**kwargs))
-    results.extend(r.inbox())
+    results.extend(r.inbox.all())
     results.sort(key=lambda post: post.created_utc, reverse=True)
     return results
 
@@ -249,13 +265,22 @@ try:
             #print(" - ",post.id)
             if post.id not in posts_evald:
                 if isinstance(post,praw.models.Message):
-                    handle_message_command(post, r, mentions, last_time)
+                    handle_message_command(post)
                 elif isinstance(post,praw.models.Submission):
                     if "r/" + config.SUBREDDIT in post.selftext.lower():
                         mentions.append(post)
                 else:
                     if "r/" + config.SUBREDDIT in post.body.lower():
                         mentions.append(post)
-                posts_evald.append(post.id)
+                if isinstance(post,praw.models.Message):
+                    post.delete()
+                else:
+                    posts_evald.append(post.id)
 except Exception as e:
-    r.redditor(config.ADMIN_USER).message('HELP!',e)
+    err_msg = str(e) + "\n\n"
+    tb = sys.exc_info()[2]
+    el = traceback.extract_tb(tb)
+    traces = traceback.format_list(el)
+    for trace in traces:
+        err_msg += "    " + trace + "\n"
+    r.redditor(config.ADMIN_USER).message('HELP!',err_msg)
