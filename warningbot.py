@@ -41,26 +41,30 @@ def bot_signature():
 
 def change_timelapse(new_timelapse):
     # new_timelapse: in hours
-    if not isinstance(new_timelapse, int):
+    global TIMELAPSE
+    try:
+        new_timelapse = int(new_timelapse)
+    except ValueError:
         return -1
     if new_timelapse <= 0:
         return -1
     TIMELAPSE = new_timelapse * 60 * 60
     try:
-        f.open(SETTINGS_FILENAME, 'r')
-        lines = ['TIMELAPSE ' + str(TIMELAPSE)]
+        f = open(SETTINGS_FILENAME, 'r')
+        lines = ['TIMELAPSE ' + str(TIMELAPSE) + '\n']
         for line in f:
             if line.split()[0] == 'TIMELAPSE':
                 continue
             lines.append(line)
         f.close()
-        f.open(SETTINGS_FILENAME, 'w')
+        f = open(SETTINGS_FILENAME, 'w')
         f.writelines(lines)
     finally:
         f.close()
     return 0
 
 def add_exclusion(subreddit_to_exclude):
+    global EXCLUDED_SUBREDDITS
     if subreddit_to_exclude == None:
         return -1
     if subreddit_to_exclude in EXCLUDED_SUBREDDITS:
@@ -74,6 +78,7 @@ def add_exclusion(subreddit_to_exclude):
     return 0
     
 def remove_exclusion(subreddit_to_include):
+    global EXCLUDED_SUBREDDITS
     if subreddit_to_include == None:
         return -1
     if subreddit_to_include not in EXCLUDED_SUBREDDITS:
