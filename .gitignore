@@ -103,3 +103,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 config/smbconstants.py
+.idea/inspectionProfiles/Project_Default.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/subreddit-mention-bot.iml
+.idea/workspace.xml
+.idea/vcs.xml

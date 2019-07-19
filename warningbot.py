@@ -9,35 +9,45 @@ TIMELAPSE = 0
 VALID_ADMINS = [config.ADMIN_USER]
 EXCLUDED_SUBREDDITS = []
 SETTINGS_FILENAME = 'warning_settings.txt'
-BOT_COMMANDS = { 'status': 'reply_status()',
-                 'timeframe': 'change_timelapse(cmd[1])',
-                 'exclude': 'add_exclusion(cmd[1])',
-                 'include': 'remove_exclusion(cmd[1])' }
-BOT_REPLIES = { 'status': 'reply_status_content(mentions, msg.author, last_time)',
-                'timeframe': 'timeframe_updated(cmd[1], msg.author, last_time)',
-                'exclude': 'exclusion_added(cmd[1], msg.author)',
-                'include': 'exclusion_removed(cmd[1], msg.author)' }
-BOT_SYNTAX = { 'STATUS': 'Send an immediate status message with the current number of mentions across Reddit. Does **not** restart the clock timer, so you may see these mentions again in the next regularly scheduled message.',
-               'TIMEFRAME #': 'where `#` is an integer representing the number of hours for periodic updates. If shortened, the bot may send an immediate message. Otherwise, the current cycle will respect the new timeframe.',
-               'EXCLUDE [subreddit_name]': 'Adds the given subreddit (without the `r/`) to the exclusion list. Mentions on that subreddit will no longer be reported.',
-               'INCLUDE [subreddit_name]': 'Removes the given subreddit (without the `r/`) from the exclusion list. Mentions on that subreddit will be reported again.' }
+BOT_COMMANDS = {'status': 'reply_status()',
+                'timeframe': 'change_timelapse(cmd[1])',
+                'exclude': 'add_exclusion(cmd[1])',
+                'include': 'remove_exclusion(cmd[1])'}
+BOT_REPLIES = {'status': 'reply_status_content(msg.author)',
+               'timeframe': 'timeframe_updated(cmd[1], msg.author)',
+               'exclude': 'exclusion_added(cmd[1], msg.author)',
+               'include': 'exclusion_removed(cmd[1], msg.author)'}
+BOT_SYNTAX = {'STATUS': 'Send an immediate status message with the current number of mentions across Reddit. Does '
+                        '**not** restart the clock timer, so you may see these mentions again in the next regularly '
+                        'scheduled message.',
+              'TIMEFRAME #': 'where `#` is an integer representing the number of hours for periodic updates. If '
+                             'shortened, the bot may send an immediate message. Otherwise, the current cycle will '
+                             'respect the new timeframe.',
+              'EXCLUDE [subreddit_name]': 'Adds the given subreddit (without the `r/`) to the exclusion list. '
+                                          'Mentions on that subreddit will no longer be reported.',
+              'INCLUDE [subreddit_name]': 'Removes the given subreddit (without the `r/`) from the exclusion list. '
+                                          'Mentions on that subreddit will be reported again.'}
 # command variables
 result = 0
 reply_msg = ''
 
+
 def switch(dictionary, default, value):
     return dictionary.get(value, default)
 
+
 def bot_signature():
-    message = '\n\nThanks for using the Brigade Warning Bot!\n\n--------\n\nRemember that you can reply to this message,'
+    message = '\n\nThanks for using the Brigade Warning Bot!\n\n--------'
+    message += '\n\nRemember that you can reply to this message,'
     message += ' or send a new private message to this bot, in order to make adjustments to how'
     message += ' it operates. Send a single command per message with the command as the complete'
     message += ' subject OR complete body of the message.\n\nEach of these commands is case-'
     message += 'insensitive:\n\n'
-    for cmd,syntax in BOT_SYNTAX.items():
+    for cmd, syntax in BOT_SYNTAX.items():
         message += '* `' + cmd + '`: ' + syntax + '\n'
     message += '\nPlease send a message to /u/' + config.ADMIN_USER + ' if you have any questions.'
     return message
+
 
 def change_timelapse(new_timelapse):
     # new_timelapse: in hours
@@ -49,56 +59,63 @@ def change_timelapse(new_timelapse):
     if new_timelapse <= 0:
         return -1
     TIMELAPSE = new_timelapse * 60 * 60
+    file = None
     try:
-        f = open(SETTINGS_FILENAME, 'r')
+        file = open(SETTINGS_FILENAME, 'r')
         lines = ['TIMELAPSE ' + str(TIMELAPSE) + '\n']
-        for line in f:
-            if line.split()[0] == 'TIMELAPSE':
+        for fline in file:
+            if fline.split()[0] == 'TIMELAPSE':
                 continue
-            lines.append(line)
-        f.close()
-        f = open(SETTINGS_FILENAME, 'w')
-        f.writelines(lines)
+            lines.append(fline)
+        file.close()
+        file = open(SETTINGS_FILENAME, 'w')
+        file.writelines(lines)
     finally:
-        f.close()
+        file.close()
     return 0
+
 
 def add_exclusion(subreddit_to_exclude):
     global EXCLUDED_SUBREDDITS
-    if subreddit_to_exclude == None:
+    if subreddit_to_exclude is None:
         return -1
     if subreddit_to_exclude in EXCLUDED_SUBREDDITS:
         return 1
     EXCLUDED_SUBREDDITS.append(subreddit_to_exclude)
+    file = None
     try:
-        f = open(SETTINGS_FILENAME, 'a')
-        f.write(subreddit_to_exclude + '\n')
+        file = open(SETTINGS_FILENAME, 'a')
+        file.write(subreddit_to_exclude + '\n')
     finally:
-        f.close()
+        file.close()
     return 0
-    
+
+
 def remove_exclusion(subreddit_to_include):
     global EXCLUDED_SUBREDDITS
-    if subreddit_to_include == None:
+    if subreddit_to_include is None:
         return -1
     if subreddit_to_include not in EXCLUDED_SUBREDDITS:
         return 1
     EXCLUDED_SUBREDDITS.remove(subreddit_to_include)
+    file = None
     try:
-        f = open(SETTINGS_FILENAME, 'r')
+        file = open(SETTINGS_FILENAME, 'r')
         lines = []
-        for line in f:
-            if line == subreddit_to_include + '\n':
+        for fline in file:
+            if fline == subreddit_to_include + '\n':
                 continue
-            lines.append(line)
-        f.close()
-        f = open(SETTINGS_FILENAME, 'w')
-        f.writelines(lines)
+            lines.append(fline)
+        file.close()
+        file = open(SETTINGS_FILENAME, 'w')
+        file.writelines(lines)
     finally:
-        f.close()
+        file.close()
     return 0
 
-def get_report_data(mentions):
+
+def get_report_data():
+    global mentions
     report = {}
     for mention in mentions:
         subr_name = mention.subreddit.display_name
@@ -110,34 +127,38 @@ def get_report_data(mentions):
         report[subr_key + "|name"] = subr_name
     return report
 
+
 def print_report(report):
-    report_message = "Subreddit|Mentions|Links\n"
-    report_message += ":--|--:|:--\n"
+    global EXCLUDED_SUBREDDITS
+    message = "Subreddit|Mentions|Links\n"
+    message += ":--|--:|:--\n"
     includes_reference = False
     for sub in report:
         if sub not in EXCLUDED_SUBREDDITS:
             includes_reference = True
             break
-    if len(report) > 0 and includes_reference: # make sure a non-excluded reference is in the report
+    if len(report) > 0 and includes_reference:  # make sure a non-excluded reference is in the report
         for key, value in report.items():
             if "|links" in key or "|name" in key:
                 continue
             if key in EXCLUDED_SUBREDDITS:
                 continue
-            report_message += report[key + "|name"] + "|" + str(value) + "|"
+            message += report[key + "|name"] + "|" + str(value) + "|"
             linklist = report[key + "|links"]
             i = 1
             for link in linklist:
-                report_message += "[" + str(i) + "](" + link + ") "
+                message += "[" + str(i) + "](" + link + ") "
                 i = i + 1
-            report_message += "\n"
+            message += "\n"
     else:
-        report_message += "None|0|N/A\n"
-    report_message += "\n"
-    return report_message
-    
-def standard_message(report, last_time, time, recipient=None, is_special=False):
-    if recipient == None:
+        message += "None|0|N/A\n"
+    message += "\n"
+    return message
+
+
+def standard_message(report, now, recipient=None, is_special=False):
+    global last_time
+    if recipient is None:
         recipient_text = 'r/' + config.SUBREDDIT + ' mods'
     else:
         recipient_text = '/u/' + recipient.name
@@ -145,20 +166,23 @@ def standard_message(report, last_time, time, recipient=None, is_special=False):
         special_text = 'special'
     else:
         special_text = 'regular'
-    report_message = "Hi " + recipient_text + "!\n\nThis is your " + special_text + " report on references to the subreddit"
-    report_message += " throughout Reddit. This does NOT include cross-posts, which are generally handled"
-    report_message += " by other means, but it does include direct post or comment linking.\n\n"
-    report_message += print_report(report)
-    report_message += "This report generated by the Brigade Warning Bot.\n\nTime covered: from "
-    report_message += last_time.ctime() + " UTC to " + time.ctime() + " UTC."
-    return report_message
-    
+    message = "Hi " + recipient_text + "!\n\nThis is your " + special_text + " report on references to the"
+    message += " subreddit throughout Reddit. This does NOT include cross-posts, which are generally handled"
+    message += " by other means, but it does include direct post or comment linking.\n\n"
+    message += print_report(report)
+    message += "This report generated by the Brigade Warning Bot.\n\nTime covered: from "
+    message += last_time.ctime() + " UTC to " + now.ctime() + " UTC."
+    return message
+
+
 def reply_status():
     return 0
 
-def reply_status_content(mentions, author, last_time):
-    report = get_report_data(mentions)
-    message = standard_message(report, last_time, datetime.datetime.utcnow(), author, True)
+
+def reply_status_content(author):
+    global last_time
+    report = get_report_data()
+    message = standard_message(report, datetime.datetime.utcnow(), author, True)
     message += '\n\nThe current timeframe is ' + str(TIMELAPSE / 60 / 60) + ' hours.'
     message += '\n\nThe current list of excluded subreddits is:\n\n'
     for sub in EXCLUDED_SUBREDDITS:
@@ -168,7 +192,9 @@ def reply_status_content(mentions, author, last_time):
     message += ' scheduled notification.'
     return message
 
-def timeframe_updated(timelapse, author, last_time):
+
+def timeframe_updated(timelapse, author):
+    global last_time
     message = 'Hi /u/' + author.name + '!\n\n'
     message += 'The timeframe for the bot has now been updated to '
     message += str(timelapse) + ' hours. If that is less than the '
@@ -182,6 +208,7 @@ def timeframe_updated(timelapse, author, last_time):
     message += ' UTC.'
     return message
 
+
 def exclusion_added(exclusion, author):
     message = 'Hi /u/' + author.name + '!\n\n'
     message += 'The list of excluded subreddits has been updated to '
@@ -193,6 +220,7 @@ def exclusion_added(exclusion, author):
     for sub in EXCLUDED_SUBREDDITS:
         message += '* r/' + sub + '\n'
     return message
+
 
 def exclusion_removed(inclusion, author):
     message = 'Hi /u/' + author.name + '!\n\n'
@@ -206,16 +234,21 @@ def exclusion_removed(inclusion, author):
         message += '* r/' + sub + '\n'
     return message
 
+
 def invalid_command(cmd):
     return 'You have attempted to send a command, but the command you sent was invalid. You sent `' + cmd + '`.'
 
+
 def invalid_params():
-    return 'Either you failed to include a required parameter for your command or the parameter you supplied was invalid.'
-    
+    return 'Either you failed to include a required parameter for your command or the parameter ' \
+           'you supplied was invalid.'
+
+
 def improper_selection():
     message = 'The subreddit you indicated to exclude is already on the exclusion list,'
     message += ' or the one you indicated to include is not.'
     return message
+
 
 def handle_message_command(msg):
     # first, get the full list of valid administrators, which includes moderators of the given sub
@@ -242,42 +275,45 @@ def handle_message_command(msg):
         reply_msg = invalid_command(cmd[0]) + bot_signature()
         msg.reply(reply_msg)
         return
-    codeToExec = 'global result; result = ' + switch(BOT_COMMANDS, '-1', cmd[0].lower())
-    exec(codeToExec, globals(), locals())
+    code_to_exec = 'global result; result = ' + switch(BOT_COMMANDS, '-1', cmd[0].lower())
+    exec(code_to_exec, globals(), locals())
     if result < 0:
         reply_msg = invalid_params()
     elif result > 0:
         reply_msg = improper_selection()
     else:
-        codeToExec = 'global reply_msg; reply_msg = ' + switch(BOT_REPLIES, '-1', cmd[0].lower())
-        exec(codeToExec, globals(), locals())
+        code_to_exec = 'global reply_msg; reply_msg = ' + switch(BOT_REPLIES, '-1', cmd[0].lower())
+        exec(code_to_exec, globals(), locals())
     reply_msg += bot_signature()
     msg.reply(reply_msg)
     return
+
 
 def subs_and_cmts(subreddit, **kwargs):
     results = []
     results.extend(subreddit.new(**kwargs))
     results.extend(subreddit.comments(**kwargs))
     results.extend(r.inbox.all())
-    results.sort(key=lambda post: post.created_utc, reverse=True)
+    results.sort(key=lambda submission: submission.created_utc, reverse=True)
     return results
 
-r = praw.Reddit(user_agent=config.USER_AGENT, client_id=config.CLIENT_ID, client_secret=config.CLIENT_SECRET, username=config.REDDIT_USER, password=config.REDDIT_PW)
+
+r = praw.Reddit(user_agent=config.USER_AGENT, client_id=config.CLIENT_ID, client_secret=config.CLIENT_SECRET,
+                username=config.REDDIT_USER, password=config.REDDIT_PW)
 
 mentions = []
 last_time = None
 posts_evald = []
-
+f = None
 try:
     f = open(SETTINGS_FILENAME, 'x')
     f.write('TIMELAPSE ' + str(config.NUM_HOURS * 60 * 60) + '\n')
     f.write('EXCLUDED\n')
     f.write(config.SUBREDDIT + '\n')
     f.close()
-    f = open(SETTINGS_FILENAME,'r')
+    f = open(SETTINGS_FILENAME, 'r')
 except FileExistsError:
-    f = open(SETTINGS_FILENAME,'r')
+    f = open(SETTINGS_FILENAME, 'r')
 finally:
     for line in f:
         if line.split()[0] == 'TIMELAPSE':
@@ -285,7 +321,7 @@ finally:
             continue
         elif line == 'EXCLUDED\n':
             continue
-        EXCLUDED_SUBREDDITS.append(line)
+        EXCLUDED_SUBREDDITS.append(line.lower())
     f.close()
 
 try:
@@ -295,16 +331,16 @@ try:
         # check bodies of posts
         for post in strm:
             time = datetime.datetime.utcnow()
-            if last_time != None:
+            if last_time is not None:
                 timeDelt = time - last_time
-                if (timeDelt.total_seconds() > TIMELAPSE): # 12 hours by default
-                    post_report = get_report_data(mentions)
+                if timeDelt.total_seconds() > TIMELAPSE:  # 12 hours by default
+                    post_report = get_report_data()
                     # send the message
                     report_message = standard_message(post_report, last_time, time)
                     report_message += bot_signature()
                     hour_count = TIMELAPSE / 60 / 60
-                    # r.subreddit(config.SUBREDDIT).message(str(hour_count) + ' hour mention report',report_message)
-                    r.redditor(config.ADMIN_USER).message(str(hour_count) + ' hour mention report',report_message)
+                    # r.subreddit(config.SUBREDDIT).message(str(hour_count) + ' hour mention report', report_message)
+                    r.redditor(config.ADMIN_USER).message(str(hour_count) + ' hour mention report', report_message)
                     # clear the lists
                     mentions.clear()
                     # update the timestamp
@@ -312,18 +348,21 @@ try:
             else:
                 last_time = time
             if post.id not in posts_evald:
-                if isinstance(post,praw.models.Message):
+                if isinstance(post, praw.models.Message):
                     handle_message_command(post)
-                elif isinstance(post,praw.models.Submission):
+                elif isinstance(post, praw.models.Submission):
                     if "r/" + config.SUBREDDIT in post.selftext.lower():
                         mentions.append(post)
                 else:
                     if "r/" + config.SUBREDDIT in post.body.lower():
                         mentions.append(post)
-                if isinstance(post,praw.models.Message):
+                if isinstance(post, praw.models.Message):
                     post.delete()
                 else:
                     posts_evald.append(post.id)
+            if len(VALID_ADMINS) > 1:
+                VALID_ADMINS.clear()
+                VALID_ADMINS.append(config.ADMIN_USER)
 except Exception as e:
     err_msg = str(e) + "\n\n"
     tb = sys.exc_info()[2]
@@ -331,4 +370,4 @@ except Exception as e:
     traces = traceback.format_list(el)
     for trace in traces:
         err_msg += "    " + trace + "\n"
-    r.redditor(config.ADMIN_USER).message('HELP!',err_msg)
+    r.redditor(config.ADMIN_USER).message('HELP!', err_msg)
