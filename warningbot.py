@@ -7,7 +7,8 @@ from config import smbconstants as config
 config.SUBREDDIT = config.SUBREDDIT.lower()
 TIMELAPSE = config.NUM_HOURS * 60 * 60
 VALID_ADMINS = [config.ADMIN_USER]
-EXCLUDED_SUBREDDITS = [config.SUBREDDIT]
+EXCLUDED_SUBREDDITS = []
+SETTINGS_FILENAME = 'warning_settings.txt'
 BOT_COMMANDS = { 'status': 'reply_status()',
                  'timeframe': 'change_timelapse(cmd[1])',
                  'exclude': 'add_exclusion(cmd[1])',
@@ -28,7 +29,7 @@ def switch(dictionary, default, value):
     return dictionary.get(value, default)
 
 def bot_signature():
-    message = '\n\nThanks for using the Brigade Warning Bot!\n\nRemember that you can reply to this message,'
+    message = '\n\nThanks for using the Brigade Warning Bot!\n\n--------\n\nRemember that you can reply to this message,'
     message += ' or send a new private message to this bot, in order to make adjustments to how'
     message += ' it operates. Send a single command per message with the command as the complete'
     message += ' subject OR complete body of the message.\n\nEach of these commands is case-'
@@ -53,6 +54,11 @@ def add_exclusion(subreddit_to_exclude):
     if subreddit_to_exclude in EXCLUDED_SUBREDDITS:
         return 1
     EXCLUDED_SUBREDDITS.append(subreddit_to_exclude)
+    try:
+        f = open(SETTINGS_FILENAME, 'a')
+        f.write(subreddit_to_exclude + '\n')
+    finally:
+        f.close()
     return 0
     
 def remove_exclusion(subreddit_to_include):
@@ -61,6 +67,18 @@ def remove_exclusion(subreddit_to_include):
     if subreddit_to_include not in EXCLUDED_SUBREDDITS:
         return 1
     EXCLUDED_SUBREDDITS.remove(subreddit_to_include)
+    try:
+        f = open(SETTINGS_FILENAME, 'r')
+        lines = []
+        for line in f:
+            if line == subreddit_to_include + '\n':
+                continue
+            lines.append(line)
+        f.close()
+        f = open(SETTINGS_FILENAME, 'w')
+        f.writelines(lines)
+    finally:
+        f.close()
     return 0
 
 def get_report_data(mentions):
@@ -208,7 +226,6 @@ def handle_message_command(msg):
         msg.reply(reply_msg)
         return
     codeToExec = 'global result; result = ' + switch(BOT_COMMANDS, '-1', cmd[0].lower())
-    #print(result)
     exec(codeToExec, globals(), locals())
     if result < 0:
         reply_msg = invalid_params()
@@ -236,17 +253,30 @@ last_time = None
 posts_evald = []
 
 try:
+    f = open(SETTINGS_FILENAME, 'x')
+    f.write('EXCLUDED\n')
+    f.write(config.SUBREDDIT + '\n')
+    f.close()
+    f = open(SETTINGS_FILENAME,'r')
+except FileExistsError:
+    f = open(SETTINGS_FILENAME,'r')
+finally:
+    for line in f:
+        if line == 'EXCLUDED\n':
+            continue
+        EXCLUDED_SUBREDDITS.append(line)
+    f.close()
+
+try:
     while True:
         # get recent posts and comments
         strm = praw.models.util.stream_generator(lambda **kwargs: subs_and_cmts(r.subreddit('all'), **kwargs))
         # check bodies of posts
-        #print("Beginning post stream...")
         for post in strm:
             time = datetime.datetime.utcnow()
             if last_time != None:
                 timeDelt = time - last_time
                 if (timeDelt.total_seconds() > TIMELAPSE): # 12 hours by default
-                    #print("Sending report!")
                     post_report = get_report_data(mentions)
                     # send the message
                     report_message = standard_message(post_report, last_time, time)
@@ -258,11 +288,8 @@ try:
                     mentions.clear()
                     # update the timestamp
                     last_time = time
-                    #print("New loop begins: ",last_time.ctime())
             else:
                 last_time = time
-                #print("Time begins: ",last_time.ctime())
-            #print(" - ",post.id)
             if post.id not in posts_evald:
                 if isinstance(post,praw.models.Message):
                     handle_message_command(post)
